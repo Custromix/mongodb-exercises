@@ -51,34 +51,70 @@ Ci-dessous, vous pouvez consulter la base de données d'un service de livraison 
 
 - Écrivez une requête pour récupérer tous les utilisateurs de la collection "utilisateurs".
 
-`Votre réponse..`
+`db.utilisateurs.find({})`
 
 - Écrivez une requête pour récupérer toutes les commandes datées du 16 janvier 2023. À grande echelle, cette requête est-elle efficace ? Pourquoi ?
 
-`Votre réponse..`
+db.commandes.find({
+  "Date de commande": {
+    $gte: ISODate("2023-01-16T00:00:00"),
+    $lt: ISODate("2023-01-17T00:00:00")
+  }
+})
+
+A grand echelle la requette ne pourrait pas être très efficace et si elle n'est pas indexé correctement pour une quantité de donné volumineuse.
 
 #### Mise à jour de données
 
 - Modifiez le document d'un utilisateur pour mettre à jour son adresse e-mail (choisissez une nouvelle adresse mail).
 - Modifiez le document du restaurand Sushi Express pour ajouter un champ "fermeture" avec la date du "01/12/2023". Une opération pareille aurait-elle été possible en SQL ?
 
-`Votre réponse..`
+db.utilisateurs.updateOne({UserID:1}, {$set:{ AdresseEmail:"email-de-fou@gmail.com"}})
+db.restaurants.updateOne({ RestaurantID: 102 },{ $set: { Fermeture: ISODate("2023-01-12T00:00:00")}})
+
+Cela aurait possible sous SQL, mais cela aurait engendré d'important changement la structure de la table et de la base de donnée
 
 - Supprimez le restaurant Sushi-express. Remarquez-vous une incohérence dans l'ensemble de base de donnée ?
 
-`Votre réponse..`
+db.restaurants.deleteOne({ RestaurantID: 102 })
+
+Oui on a des ID qui ne renvoient à rien dans la table produit. Dans l'ideal il ne faudrait pas supprimer des données mais les considérer comme archivés pour eviter les fails comme celle ci. 
 
 #### Agrégation de données
 Ressource utile : https://www.mongodb.com/docs/manual/core/map-reduce/ https://www.youtube.com/watch?v=cHGaQz0E7AU https://www.youtube.com/watch?v=fEACZP_878Y
 - Utilisez l'agrégation pour trouver la moyenne des prix des produits.
  
-`Votre réponse..`
+db.produits.aggregate([
+  {
+    $group: {
+      _id: null,
+      moyennePrix: { $avg: "$Prix" }
+    }
+  }
+])
+
+*En utilisant map reduce*
+
+
 
 - Utilisez l'agrégation pour regrouper les utilisateurs par adresse et compter combien d'utilisateurs ont la même adresse.
  
-`Votre réponse..`
+db.utilisateurs.aggregate([
+  {
+    $group: {
+      _id: "$Adresse",
+      nombreUtilisateurs: { $sum: 1 }
+    }
+  },
+  {
+    $sort: { nombreUtilisateurs: -1 }
+  }
+])
 
 - En considérant le fait que MongoDB dispatch ses données sur plusieurs serveurs, en quoi cette méthode "d'agrégation" permet à MongoDB de travailler efficacement ?
+
+Map reduce extrait des informations recherchés de chaque document en commancant par mapper sous forme de paire de key-value, viens ensuite la phase de shuffle pour réorganiser les paires, et la phase de réduction effectue des opérations sur chaque paires key-value pour obtenir la sortie finale. Le Map-Reduce est adapté aux tâches complexes et aux données réparties sur plusieurs serveurs. 
+Aujourd'hui MongoDB tend a amener ses utilisateurs à utiliser l'agregation avec un traitement aux données similaire a map reduce. 
 
 `Votre réponse..`
 
